@@ -31,15 +31,42 @@ contract Paypal {
 
     mapping (address => request[]) requests;
     mapping (address => SendReceive[]) history;
-    mapping (address => userName) userNames;
+    mapping (address => userName) names;
 
     constructor() {
         owner = msg.sender;
     }
 
-    function createRequest(address _requestor, uint256 _amount, string memory _message, string memory _name) public {
+    function addName(string memory _name) public {
+       userName storage newuserName = names[msg.sender];
+       newuserName.name = _name;
+       newuserName.hasName = true;
+    }
+
+    function createRequest(address user, uint256 _amount, string memory _message) public {
          
-         requests[msg.sender] =  request( _requestor,_amount,_message, _name);
+          request memory newRequest;
+          newRequest.requestor = user;
+          newRequest.amount = _amount;
+          newRequest.message = _message;
+          if (names[msg.sender].hasName) {
+             newRequest.name = names[msg.sender].name;
+          }
+          requests[user].push(newRequest);
+            }
+
+    function payRequest( uint256 _request)  public payable {
+
+        require(_request < requests[msg.sender].length,"No such Request");
+        request[] storage myRequests = requests[msg.sender];
+        request storage payableRequest = myRequests[_request];
+
+          uint256 toPay = payableRequest.amount * 1000000000000000000;
+          require(msg.value == (toPay),"Pay correct amount");
+          payable(payableRequest.requestor).transfer(msg.value);
+          myRequests[_request] = myRequests[myRequests.length-1];
+          myRequests.pop();
+
   }
 
 
